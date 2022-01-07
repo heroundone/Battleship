@@ -4,27 +4,16 @@ if they do then the ship is sunk */
 
 const shipFactory = (length, nameOfShip) => {
 
-    // based on length of ship, divide ship into sections that can be hit, make representative array
-    const createHitZones = (length) => {
-        let hitZones = [];
-        for(let i = 0; i < length; i++) {
-            hitZones.push('not damaged');
-        }
-        return hitZones;
-    };
-
     // an array that keeps track of which sections of the ship have been hit
     const condition = [];
 
-    // a name that allows the ship to be searched for
+    // a name that will be used as a key in an object containing multiple ships
     const shipName = nameOfShip;
 
     /* Passes in the section or sections of the ship that is/are hit
     and marks the corresponding index(es) as hit in the condition array */
-    const hit = (status, ...sectionsOfShipTargeted) => {
-        sectionsOfShipTargeted.forEach((section) => {
-            condition[section] = status; // status is something like(coordinates, 'hit')
-        });
+    const hit = (status, sectionsOfShipTargeted) => {
+        condition[sectionsOfShipTargeted] = status; // status is something like(coordinates, 'hit')
         return condition;
     };
 
@@ -86,7 +75,7 @@ const gameboardFactory = (gridSize) => {
             let row = board[`${stringifiedRowNumber}`] // make sure rownumber is a string for property access
             for(let i = 0; i < lengthOfShip; i++) {
                 row[columnNumber] = 'not damaged';
-                ship.condition.push(`${rowNumber}${columnNumber}, 'not damaged'`)
+                ship.condition.push(`${rowNumber}${columnNumber}, not damaged`)
                 columnNumber += 1; // after each loop move to the next column
             };
             ships[ship.shipName] = ship;
@@ -100,10 +89,10 @@ const gameboardFactory = (gridSize) => {
                 newRowNumber = rowNumber.toString();
             };
         };
-        return board;
+        return [ship, board];
     };
 
-    const receiveAttacks = (rowNumber, columnNumber) => {
+    const receiveAttack = (rowNumber, columnNumber) => {
         // handle an attack that has already been made once
         let row = board[rowNumber.toString()];
         if(row[columnNumber] === 'miss' || row[columnNumber] === 'hit') {
@@ -115,16 +104,18 @@ const gameboardFactory = (gridSize) => {
         const attackCoordinates = `${rowNumber}${columnNumber}`;
         for(let key in ships) {
            let ship = ships[key];
-           if(ship.condition.includes(`${attackCoordinates}, 'not damaged'`)) {
+           if(ship.condition.includes(`${attackCoordinates}, not damaged`)) {
                // update ship's condition
-               let index = ship.condition.indexOf(`${attackCoordinates}, 'not damaged'`);
-               let status = `${attackCoordinates}, 'hit'`
+               let index = ship.condition.indexOf(`${attackCoordinates}, not damaged`);
+               let status = `${attackCoordinates}, hit`
                ship.hit(status, index);
 
                // update the board
                row[columnNumber] = 'hit';
+               return 'hit'
            } else {
                row[columnNumber] = 'miss';
+               return 'miss'
            }
         }
     };
@@ -140,7 +131,7 @@ const gameboardFactory = (gridSize) => {
         return true;
     };
 
-    return { board, placeShip, receiveAttacks, checkAllShips };
+    return { board, placeShip, receiveAttack, checkAllShips };
 };
 
 // ships.ship[hitzones] = arrray

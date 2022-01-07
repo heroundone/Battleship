@@ -1,21 +1,19 @@
 import { shipFactory } from "./src/battleship-game-logic.js";
 import { gameboardFactory } from "./src/battleship-game-logic.js";
 
-const mockShip = shipFactory(3);
+const mockShip = shipFactory(2);
 const mockBoard = gameboardFactory(1);
 
 // tests for ship factory function
 test('create a ship', () => {
-    expect(shipFactory(1)).not.toBeUndefined();
-});
-
-test('ship can be hit', () => {
-    expect(mockShip.hit(1)).toEqual(['not hit', 'hit', 'not hit'])
+    expect(shipFactory(1, 'odyssey')).not.toBeUndefined();
 });
 
 test('ship can be sunk', () => {
-    mockShip.hit(0, 1, 2);
-    expect(mockShip.isSunk()).toBeTruthy();
+    const result = mockBoard.placeShip(0, 0, 2, 'chesapeake', 'horizontal');
+    mockBoard.receiveAttack(0,0);
+    mockBoard.receiveAttack(0,1);
+    expect(mockBoard.checkAllShips()).toBeTruthy();
 });
 
 // tests for gameboard factory function
@@ -25,5 +23,6 @@ test('create a gameboard', () => {
 
 // after placeShip, check new values of board, placeShip should return the board
 test('check if ship gets placed', () => {
-    expect(mockBoard.placeShip(0, 0, 5, 'horizontal')).toEqual({'0':['not hit','not hit', 'not hit', 'not hit', 'not hit', 'nothing here', 'nothing here', 'nothing here']})
+    const result = mockBoard.placeShip(0, 0, 5, 'chesapeake', 'horizontal');
+    expect(result[1]).toEqual({'0':['not damaged','not damaged', 'not damaged', 'not damaged', 'not damaged', 'nothing here', 'nothing here', 'nothing here']})
 });
