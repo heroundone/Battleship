@@ -8,20 +8,24 @@
 #gameboards {
     display: flex;
     justify-content: center;
-    gap: 10px;
+    gap: 50px;
 }
 
 .gameboard {
     display: flex;
-    width: 50px;
+    width: 300px;
+    height: 300px;
     box-sizing: border-box;
     flex-wrap: wrap;
+    border: 1px solid black;
 }
 
 .coordinateDiv {
     box-sizing: border-box;
-    width: 10px;
-    height: 10px;
+    width: 10%;
+    height: 10%;
+    border: 1px solid black;
+    text-align: center;
 }
 
 .hit {

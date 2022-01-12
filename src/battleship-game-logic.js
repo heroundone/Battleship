@@ -21,7 +21,7 @@ const shipFactory = (length, nameOfShip) => {
         let regex = /.*hit/; // regex expression for matching when determining whether a ship has sunk
         const filteredCondition = condition.filter(status => regex.test(status)); 
         // the number of hits(length of the filtered array) should correspond to the length of the ship if it is sunk
-        if(filteredCondition.length === length) {
+        if(filteredCondition.length === condition.length) {
             return true;
         } else {
             return false;
@@ -159,14 +159,23 @@ const player = (name) => {
                     let newColumnNumber = parseInt(recentAttackArray[1]);
                     
                     // test the strategy of checking left, right, up, and down from the successful attack
-                    const outcome = testStrategy(newRowNumber, newColumnNumber, opponentBoard);
+                    const outcome = testStrategy(newRowNumber, newColumnNumber, opponent.playerBoard);
                     // if the strategy works then we can return, and end the computer's turn
                     if(outcome !== false) {
+                        if(outcome.includes('row')) {
                         // obtain element from ui gameboard that matches coordinates of randomly generated coordinates
-                        let coordinate = `coordinate:${randomRowNumber}${randomColumnNumber}`;
-                        let gameBoardElement = document.querySelector(`#${opponent.playerName} #${coordinate}`);
+                        let coordinate = `Coordinate:${outcome[2]}${newColumnNumber}`;
+                        let gameBoardElement = document.querySelector(`div[id='${opponent.playerName}'] div[id='${coordinate}']`);
                         gameBoardElement.click();
-                        return outcome;
+                        }
+                        else if(outcome.includes('column')) {
+                        // obtain element from ui gameboard that matches coordinates of randomly generated coordinates
+                        let coordinate = `Coordinate:${newRowNumber}${outcome[2]}`;
+                        let gameBoardElement = document.querySelector(`div[id='${opponent.playerName}'] div[id='${coordinate}']`);
+                        gameBoardElement.click();
+                        };
+                        
+                        return outcome[0];
                     };
                 };
             };
@@ -186,8 +195,8 @@ const player = (name) => {
             attacks.push(`${randomRowNumber}${randomColumnNumber}, ${attackResult}`);
 
             // obtain element from ui gameboard that matches coordinates of randomly generated coordinates
-            let coordinate = `coordinate:${randomRowNumber}${randomColumnNumber}`;
-            let gameBoardElement = document.querySelector(`#${opponent.playerName} #${coordinate}`);
+            let coordinate = `Coordinate:${randomRowNumber}${randomColumnNumber}`;
+            let gameBoardElement = document.querySelector(`div[id='${opponent.playerName}'] div[id='${coordinate}']`);
             gameBoardElement.click();
 
             // now return result for the computerResponse function to make use of
@@ -203,6 +212,10 @@ const player = (name) => {
 
     // determine whether the computer is set to make a valid attack
     const testAttack = (rowNumber, columnNumber) => {
+        // make sure rowNumber and columnNumber do not go beyond the boundaries of the board
+        if(rowNumber > 9 || rowNumber < 0 || columnNumber > 9 || columnNumber < 0) {
+            return false;
+        };
         const gameBoard = playerBoard.board;
         const row = gameBoard[rowNumber.toString()];
         const status = row[columnNumber];
@@ -227,7 +240,7 @@ const player = (name) => {
         if(result === true) {
             const attackResult = opponentBoard.receiveAttack(rowNumberPlus, columnNumber);
             attacks.push(`${rowNumberPlus}${columnNumber}, ${attackResult}`)
-            return attackResult;
+            return [attackResult, 'row', rowNumberPlus];
         };
         // rowNumber - 1 check
         let rowNumberMinus = rowNumber - 1;
@@ -235,7 +248,7 @@ const player = (name) => {
         if(result === true) {
             const attackResult = opponentBoard.receiveAttack(rowNumberMinus, columnNumber);
             attacks.push(`${rowNumberMinus}${columnNumber}, ${attackResult}`)
-            return attackResult;
+            return [attackResult, 'row', rowNumberMinus];
         };
         // columnNumber + 1 check
         let columnNumberPlus = columnNumber + 1;
@@ -243,7 +256,7 @@ const player = (name) => {
         if(result === true) {
             const attackResult = opponentBoard.receiveAttack(rowNumber, columnNumberPlus);
             attacks.push(`${rowNumber}${columnNumberPlus}, ${attackResult}`)
-            return attackResult;
+            return [attackResult, 'column', columnNumberPlus];
         }
         // columnNumber - 1 check
         let columnNumberMinus = columnNumber - 1;
@@ -251,9 +264,11 @@ const player = (name) => {
         if(result === true) {
             const attackResult = opponentBoard.receiveAttack(rowNumber, columnNumberMinus);
             attacks.push(`${rowNumber}${columnNumberMinus}, ${attackResult}`)
-            return attackResult;
+            return [attackResult, 'column', columnNumberMinus];
         }
-        return false;
+        else {
+            return false;
+        }
     };
 
     const getRandomInt = (min, max) => {
@@ -264,10 +279,54 @@ const player = (name) => {
     return {playerName, playerBoard, makeAttack}
 };
 
+const gameLoop = (name) => {
+    // create players
+    const humanPlayer = player(name);
+    const computerPlayer = player('computer');
+
+    // create the gameboard visuals
+    DOM.createGameboardVisual(humanPlayer);
+    DOM.createGameboardVisual(computerPlayer);
+
+    // TODO: manually place ships for now, add way for user to specify later(would need function to check if space is occupied)
+    humanPlayer.playerBoard.placeShip(0, 0, 6, 'chesapeake', 'horizontal');
+    humanPlayer.playerBoard.placeShip(5, 7, 3, 'altuna', 'horizontal');
+    humanPlayer.playerBoard.placeShip(2, 3, 5, 'peep', 'horizontal');
+    humanPlayer.playerBoard.placeShip(8, 3, 5, 'fate', 'horizontal');
+    humanPlayer.playerBoard.placeShip(9, 3, 5, 'toot', 'horizontal');
+    humanPlayer.playerBoard.placeShip(1, 3, 5, 'feet', 'horizontal');
+
+    computerPlayer.playerBoard.placeShip(0, 5, 3, 'york', 'vertical');
+    computerPlayer.playerBoard.placeShip(7, 3, 2, 'pentatonic', 'horizontal');
+
+    // make the computer's board responsive
+    DOM.makeGameBoardsAttackable(computerPlayer, humanPlayer);
+
+    const determineWinner = () => {
+        const humanLost = humanPlayer.playerBoard.checkAllShips();
+        const computerLost= computerPlayer.playerBoard.checkAllShips();
+        if(humanLost === true) {
+            document.getElementById('winner').textContent = 'Computer Wins';
+            const coordinateDivsArray = Array.from(document.querySelectorAll('#gameboards div'));
+            coordinateDivsArray.forEach(div => div.classList.add('waitForComputer'));
+            return;
+        }
+        else if (computerLost === true) {
+            document.getElementById('winner').textContent = `${humanPlayer.playerName} wins`;
+            const coordinateDivsArray = Array.from(document.querySelectorAll('#gameboards div'));
+            coordinateDivsArray.forEach(div => div.classList.add('waitForComputer'));
+            return;
+        }
+        else {
+            return 'No Winner Yet';
+        }
+    };
+    return {determineWinner}
+};
+
 const DOM = (() => {
-    // need initial event listeners added
     //document.getElementById('startGame').addEventListener('click', gameLoop);
-    let game = gameLoop();
+    
 
     // event listener additions that will be called later as needed(eg. placing ships)
     /*  function creates the gameboards, each div in the grid will have the respective coordinate data */
@@ -285,9 +344,8 @@ const DOM = (() => {
         // create a div representation of each coordinate in the gameboard object
         for(let key in gameboardObject) {
             let rowCoordinate = key;
-            for(let i = 0; i < gameboardObject.key.length; i++) {
-                let columnArray = gameboardObject.key;
-                let columnCoordinate = columnArray[i].toString();
+            for(let i = 0; i < gameboardObject[key].length; i++) {
+                let columnCoordinate = i;
                 // now create the coordinate div
                 coordinateData = document.createElement('div');
                 coordinateData.id = 'Coordinate:' + rowCoordinate + columnCoordinate;
@@ -307,7 +365,7 @@ const DOM = (() => {
         computerCoordinateDivsArray.forEach(div => div.addEventListener('click', (e) => {
             attackComputer(e, computerPlayer, humanPlayer);
         }));
-        const humanCoordinateDivsArray = Array.from(document.querySelectorAll(`${humanPlayer.playerName} div`));
+        const humanCoordinateDivsArray = Array.from(document.querySelectorAll(`div[id='${humanPlayer.playerName}'] div`));
         humanCoordinateDivsArray.forEach(div => div.addEventListener('click', (e) => {
             attackHuman(e, humanPlayer);
         }));
@@ -325,9 +383,8 @@ const DOM = (() => {
         let rowNumber = parseInt(coordinatesArray[0]);
         let columnNumber = parseInt(coordinatesArray[1]);
 
-        let boardOwner = coordinateClicked.parentElement.id;
         // make the attack and display the result on the board
-        const result = makeAttack(rowNumber, columnNumber, computerPlayer)
+        const result = humanPlayer.makeAttack(rowNumber, columnNumber, computerPlayer)
         if(result === 'hit') {
             coordinateClicked.textContent = 'X';
             coordinateClicked.classList.add('hit');
@@ -339,30 +396,38 @@ const DOM = (() => {
                 return;
             }
             else {
-                let result = computerResponse(0, 0, humanPlayer) 
+                let result = computerResponse(0, 0, humanPlayer, computerPlayer) 
                 // check if computer won
-                if(result = 'hit') {
+                if(result === 'hit') {
                     let outcome = game.determineWinner();
                     if(outcome === 'No Winner Yet') {
                         const coordinateDivsArray = Array.from(document.querySelectorAll('#computer div'));
                         coordinateDivsArray.forEach(div => div.classList.toggle('waitForComputer'));
                     };
-                };
+                }
+                else {
+                      const coordinateDivsArray = Array.from(document.querySelectorAll('#computer div'));
+                        coordinateDivsArray.forEach(div => div.classList.toggle('waitForComputer'));
+                }
             };
             
         }
         else if (result === 'miss') {
             coordinateClicked.textContent = 'O';
             coordinateClicked.classList.add('miss');
-            let result = computerResponse(0, 0, humanPlayer) 
+            let result = computerResponse(0, 0, humanPlayer, computerPlayer) 
             // check if computer won
-            if(result = 'hit') {
+            if(result === 'hit') {
                let outcome = game.determineWinner();
                if(outcome === 'No Winner Yet') {
                  const coordinateDivsArray = Array.from(document.querySelectorAll('#computer div'));
                  coordinateDivsArray.forEach(div => div.classList.toggle('waitForComputer'));
                }
-            };
+            }
+            else {
+                const coordinateDivsArray = Array.from(document.querySelectorAll('#computer div'));
+                coordinateDivsArray.forEach(div => div.classList.toggle('waitForComputer'));
+            }
         }
         else {
             return;
@@ -398,10 +463,10 @@ const DOM = (() => {
     };
 
     // after human player makes an attack the computer responds with its own attack
-    const computerResponse = (rowNumber, columnNumber, humanPlayer) => {
-        const coordinateDivsArray = Array.from(document.querySelectorAll('#computer div'));
+    const computerResponse = (rowNumber, columnNumber, humanPlayer, computerPlayer) => {
+        const coordinateDivsArray = Array.from(document.querySelectorAll("div[id='computer'] div"));
         coordinateDivsArray.forEach(div => div.classList.toggle('waitForComputer'));
-        let result = makeAttack(rowNumber, columnNumber, humanPlayer);
+        let result = computerPlayer.makeAttack(rowNumber, columnNumber, humanPlayer);
         return result;
     };
 
@@ -409,53 +474,7 @@ const DOM = (() => {
     return {createGameboardVisual, makeGameBoardsAttackable}
 })();
 
-//TODO: create a function to randomly place the computer's ships
+let game = gameLoop('john');
 
-const gameLoop = (name) => {
-    // create players
-    const humanPlayer = player(name);
-    const computerPlayer = player('computer');
 
-    // create the gameboard visuals
-    DOM.createGameboardVisual(humanPlayer);
-    DOM.createGameboardVisual(computerPlayer);
-
-    // TODO: manually place ships for now, add way for user to specify later(would need function to check if space is occupied)
-    humanPlayer.playerBoard.placeShip(0, 0, 3, 'chesapeake', 'horizontal');
-    humanPlayer.playerBoard.placeShip(5, 7, 2, 'altuna', 'horizontal');
-
-    computerPlayer.playerBoard.placeShip(0, 5, 3, 'york', 'vertical');
-    computerPlayer.playerBoard.placeShip(7, 3, 2, 'pentatonic', 'horizontal');
-
-    // make the computer's board responsive
-    DOM.makeGameBoardsAttackable(computerPlayer, humanPlayer);
-
-    // player goes, check if winner, computer goes, check if winner, etc
-
-    // gameloop continues as long as either player has not had all of their ships sunken
-    while(humanPlayer.playerBoard.checkAllShips() === false && computerPlayer.playerBoard.checkAllShips() === false) {
-    
-    };
-    const determineWinner = () => {
-        const humanLost = humanPlayer.playerBoard.checkAllShips();
-        const computerLost= computerPlayer.playerBoard.checkAllShips();
-        if(humanLost === true) {
-            document.getElementById('winner').textContent = 'Computer Wins';
-            const coordinateDivsArray = Array.from(document.querySelectorAll('#gameboards div'));
-            coordinateDivsArray.forEach(div => div.classList.add('waitForComputer'));
-            return;
-        }
-        else if (computerLost === true) {
-            document.getElementById('winner').textContent = `${humanPlayer} wins`;
-            const coordinateDivsArray = Array.from(document.querySelectorAll('#gameboards div'));
-            coordinateDivsArray.forEach(div => div.classList.add('waitForComputer'));
-            return;
-        }
-        else {
-            return 'No Winner Yet';
-        }
-    };
-    return {determineWinner}
-};
-
-export { shipFactory, gameboardFactory, player, DOM, gameLoop };
+//export { shipFactory, gameboardFactory, player, DOM, gameLoop };
