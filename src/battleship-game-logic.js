@@ -19,7 +19,7 @@ const shipFactory = (length, nameOfShip) => {
     // filter the condition array to see if all indexes contain 'hit', if so the ship is sunk
     const isSunk = () => {
         let regex = /.*hit/; // regex expression for matching when determining whether a ship has sunk
-        const filteredCondition = condition.filter(status => regex.test(status)); // FIX: USE REGULAR EXPRESSION
+        const filteredCondition = condition.filter(status => regex.test(status)); 
         // the number of hits(length of the filtered array) should correspond to the length of the ship if it is sunk
         if(filteredCondition.length === length) {
             return true;
@@ -47,7 +47,7 @@ const gameboardFactory = (gridSize) => {
 
     /* create a gameboard that is represented as an object(keys are row numbers, 
        and values are the status of each square in the row)*/
-    const createBoard = () => {
+    const createBoard = (gridsize) => {
         // parameters for what grid size can be
         if(gridSize <= 0 || gridSize > 10) {
             return;
@@ -92,8 +92,10 @@ const gameboardFactory = (gridSize) => {
 
     const receiveAttack = (rowNumber, columnNumber) => {
         // handle an attack that has already been made once
+        let regexMiss = /.*miss/;
+        let regexHit = /.*hit/;
         let row = board[rowNumber.toString()];
-        if(row[columnNumber] === 'miss' || row[columnNumber] === 'hit') {
+        if(regexMiss.test(row[columnNumber]) || regexHit.test(row[columnNumber])) {
             return
         };
         
@@ -114,11 +116,12 @@ const gameboardFactory = (gridSize) => {
            let index = ship.condition.indexOf(`${attackCoordinates}, not damaged`);
            let status = `${attackCoordinates}, hit`
            ship.hit(status, index);
+           return 'hit';
        }
            
        else {
            row[columnNumber] = 'miss';
-           return;
+           return 'miss';
        };
     };
 
@@ -133,19 +136,19 @@ const gameboardFactory = (gridSize) => {
         return true;
     };
 
-    return { board, placeShip, receiveAttack, checkAllShips };
+    return { board, ships, placeShip, receiveAttack, checkAllShips };
 };
 
 const player = (name) => {
 
-    // store an array of attacks made, if most recent one is a hit, check adjacent coordinates
+    // store an array of attacks made by computer, if most recent one is a hit, check adjacent coordinates
     const attacks = [];
     const playerName = name;
     const playerBoard = gameboardFactory(10);
 
-    const makeAttack = (rowNumber, columnNumber, opponentBoard) => {
+    const makeAttack = (rowNumber, columnNumber, opponent) => {
         // computer will follow this path
-        if(name === 'computer') {
+        if(opponent.playerName !== 'computer') {
             // check if computer's most recent attack is a hit, if so 
             if(attacks.length > 0) {
                 let regex = /.*hit/;
@@ -158,8 +161,12 @@ const player = (name) => {
                     // test the strategy of checking left, right, up, and down from the successful attack
                     const outcome = testStrategy(newRowNumber, newColumnNumber, opponentBoard);
                     // if the strategy works then we can return, and end the computer's turn
-                    if(outcome === true) {
-                        return;
+                    if(outcome !== false) {
+                        // obtain element from ui gameboard that matches coordinates of randomly generated coordinates
+                        let coordinate = `coordinate:${randomRowNumber}${randomColumnNumber}`;
+                        let gameBoardElement = document.querySelector(`#${opponent.playerName} #${coordinate}`);
+                        gameBoardElement.click();
+                        return outcome;
                     };
                 };
             };
@@ -172,15 +179,25 @@ const player = (name) => {
                 randomRowNumber = getRandomInt(0,9);
                 randomColumnNumber = getRandomInt(0,9);
                 // test whether the random numbers are valid
-                result = testAttack(randomRowNumber, randomColumnNumber)
+                result = testAttack(randomRowNumber, randomColumnNumber);
             };
             // once a valid attack is obtained, make the attack
-            const attackResult = opponentBoard.receiveAttack(randomRowNumber, randomColumnNumber);
-            attacks.push(`${randomRowNumber}${randomColumnNumber}, ${attackResult}`)
+            const attackResult = opponent.playerBoard.receiveAttack(randomRowNumber, randomColumnNumber);
+            attacks.push(`${randomRowNumber}${randomColumnNumber}, ${attackResult}`);
+
+            // obtain element from ui gameboard that matches coordinates of randomly generated coordinates
+            let coordinate = `coordinate:${randomRowNumber}${randomColumnNumber}`;
+            let gameBoardElement = document.querySelector(`#${opponent.playerName} #${coordinate}`);
+            gameBoardElement.click();
+
+            // now return result for the computerResponse function to make use of
+            return attackResult;
+            
         }
         // human controlled path
         else {
-            opponentBoard.receiveAttack(rowNumber, columnNumber)
+            const result = opponent.playerBoard.receiveAttack(rowNumber, columnNumber);
+            return result;
         };
     };
 
@@ -210,7 +227,7 @@ const player = (name) => {
         if(result === true) {
             const attackResult = opponentBoard.receiveAttack(rowNumberPlus, columnNumber);
             attacks.push(`${rowNumberPlus}${columnNumber}, ${attackResult}`)
-            return true;
+            return attackResult;
         };
         // rowNumber - 1 check
         let rowNumberMinus = rowNumber - 1;
@@ -218,7 +235,7 @@ const player = (name) => {
         if(result === true) {
             const attackResult = opponentBoard.receiveAttack(rowNumberMinus, columnNumber);
             attacks.push(`${rowNumberMinus}${columnNumber}, ${attackResult}`)
-            return true;
+            return attackResult;
         };
         // columnNumber + 1 check
         let columnNumberPlus = columnNumber + 1;
@@ -226,7 +243,7 @@ const player = (name) => {
         if(result === true) {
             const attackResult = opponentBoard.receiveAttack(rowNumber, columnNumberPlus);
             attacks.push(`${rowNumber}${columnNumberPlus}, ${attackResult}`)
-            return true;
+            return attackResult;
         }
         // columnNumber - 1 check
         let columnNumberMinus = columnNumber - 1;
@@ -234,7 +251,7 @@ const player = (name) => {
         if(result === true) {
             const attackResult = opponentBoard.receiveAttack(rowNumber, columnNumberMinus);
             attacks.push(`${rowNumber}${columnNumberMinus}, ${attackResult}`)
-            return true;
+            return attackResult;
         }
         return false;
     };
@@ -247,17 +264,173 @@ const player = (name) => {
     return {playerName, playerBoard, makeAttack}
 };
 
-const DOM = () => {
+const DOM = (() => {
     // need initial event listeners added
+    //document.getElementById('startGame').addEventListener('click', gameLoop);
+    let game = gameLoop();
 
     // event listener additions that will be called later as needed(eg. placing ships)
-};
+    /*  function creates the gameboards, each div in the grid will have the respective coordinate data */
+    const createGameboardVisual = (player) => {
+        // will eventually append each coordinate in grid to gamebaord div
+        let gameboard = document.createElement('div');
+        gameboard.id = player.playerName;
+        gameboard.classList.add('gameboard');
+
+        // create document fragment to add coordinate divs to
+        const documentFragment = document.createDocumentFragment();
+
+        // variable to contain the actual board object
+        let gameboardObject = player.playerBoard.board;
+        // create a div representation of each coordinate in the gameboard object
+        for(let key in gameboardObject) {
+            let rowCoordinate = key;
+            for(let i = 0; i < gameboardObject.key.length; i++) {
+                let columnArray = gameboardObject.key;
+                let columnCoordinate = columnArray[i].toString();
+                // now create the coordinate div
+                coordinateData = document.createElement('div');
+                coordinateData.id = 'Coordinate:' + rowCoordinate + columnCoordinate;
+                coordinateData.classList.add('coordinateDiv');
+                // append the coordinate div to the doc frag
+                documentFragment.appendChild(coordinateData);
+            };
+        };
+        // append the finished doc fragment to the gameboard div, append gameboard to the gameboards div
+        gameboard.appendChild(documentFragment);
+        document.getElementById('gameboards').appendChild(gameboard);
+    };
+
+    // add event listeners to the computer's coordinate divs(each location in the grid)
+    const makeGameBoardsAttackable = (computerPlayer, humanPlayer) => {
+        const computerCoordinateDivsArray = Array.from(document.querySelectorAll('#computer div'));
+        computerCoordinateDivsArray.forEach(div => div.addEventListener('click', (e) => {
+            attackComputer(e, computerPlayer, humanPlayer);
+        }));
+        const humanCoordinateDivsArray = Array.from(document.querySelectorAll(`${humanPlayer.playerName} div`));
+        humanCoordinateDivsArray.forEach(div => div.addEventListener('click', (e) => {
+            attackHuman(e, humanPlayer);
+        }));
+    };
+
+    // called upon clicking on a grid coordinate within the computer's gameboard
+    const attackComputer = (event, computerPlayer, humanPlayer) => {
+        // id looks like(ex. 'Coordinate:01')
+        // get the coordinates from the coordinate div html
+        const coordinateClicked = event.target;
+        const id = coordinateClicked.id;
+        const idArray = id.split(':');
+        const coordinates = idArray[1];
+        const coordinatesArray = coordinates.split('');
+        let rowNumber = parseInt(coordinatesArray[0]);
+        let columnNumber = parseInt(coordinatesArray[1]);
+
+        let boardOwner = coordinateClicked.parentElement.id;
+        // make the attack and display the result on the board
+        const result = makeAttack(rowNumber, columnNumber, computerPlayer)
+        if(result === 'hit') {
+            coordinateClicked.textContent = 'X';
+            coordinateClicked.classList.add('hit');
+            let status = game.determineWinner();
+            if(status === 'Human Wins') {
+                document.getElementById('winner').textContent = `${humanPlayer} wins`;
+                const coordinateDivsArray = Array.from(document.querySelectorAll('#gameboards div'));
+                coordinateDivsArray.forEach(div => div.classList.add('waitForComputer'));
+                return;
+            }
+            else {
+                let result = computerResponse(0, 0, humanPlayer) 
+                // check if computer won
+                if(result = 'hit') {
+                    let outcome = game.determineWinner();
+                    if(outcome === 'No Winner Yet') {
+                        const coordinateDivsArray = Array.from(document.querySelectorAll('#computer div'));
+                        coordinateDivsArray.forEach(div => div.classList.toggle('waitForComputer'));
+                    };
+                };
+            };
+            
+        }
+        else if (result === 'miss') {
+            coordinateClicked.textContent = 'O';
+            coordinateClicked.classList.add('miss');
+            let result = computerResponse(0, 0, humanPlayer) 
+            // check if computer won
+            if(result = 'hit') {
+               let outcome = game.determineWinner();
+               if(outcome === 'No Winner Yet') {
+                 const coordinateDivsArray = Array.from(document.querySelectorAll('#computer div'));
+                 coordinateDivsArray.forEach(div => div.classList.toggle('waitForComputer'));
+               }
+            };
+        }
+        else {
+            return;
+        };
+    };
+
+    // when computer makes a valid attack the corresponding element is clicked on in the human's gameboard
+    const attackHuman = (event, humanPlayer) => {
+        // regex for determining hit or miss
+        regexHit = /.*hit/;
+        regexMiss = /.*miss/;
+        let coordinateClicked = event.target;
+        // was it a hit or a miss
+        const id = coordinateClicked.id;
+        const idArray = id.split(':');
+        const coordinates = idArray[1];
+        const coordinatesArray = coordinates.split('');
+        let rowNumber = parseInt(coordinatesArray[0]);
+        let columnNumber = parseInt(coordinatesArray[1]);
+
+        let humanGameBoard = humanPlayer.playerBoard.board;
+        let row = humanGameBoard[rowNumber];
+        let status = row[columnNumber];
+
+        if(regexHit.test(status)) {
+            coordinateClicked.classList.add('hit');
+            coordinateClicked.textContent = 'X';
+        }
+        else if(regexMiss.test(status)) {
+            coordinateClicked.classList.add('miss');
+            coordinateClicked.textContent = 'O';
+        };
+    };
+
+    // after human player makes an attack the computer responds with its own attack
+    const computerResponse = (rowNumber, columnNumber, humanPlayer) => {
+        const coordinateDivsArray = Array.from(document.querySelectorAll('#computer div'));
+        coordinateDivsArray.forEach(div => div.classList.toggle('waitForComputer'));
+        let result = makeAttack(rowNumber, columnNumber, humanPlayer);
+        return result;
+    };
+
+
+    return {createGameboardVisual, makeGameBoardsAttackable}
+})();
 
 //TODO: create a function to randomly place the computer's ships
 
 const gameLoop = (name) => {
+    // create players
     const humanPlayer = player(name);
     const computerPlayer = player('computer');
+
+    // create the gameboard visuals
+    DOM.createGameboardVisual(humanPlayer);
+    DOM.createGameboardVisual(computerPlayer);
+
+    // TODO: manually place ships for now, add way for user to specify later(would need function to check if space is occupied)
+    humanPlayer.playerBoard.placeShip(0, 0, 3, 'chesapeake', 'horizontal');
+    humanPlayer.playerBoard.placeShip(5, 7, 2, 'altuna', 'horizontal');
+
+    computerPlayer.playerBoard.placeShip(0, 5, 3, 'york', 'vertical');
+    computerPlayer.playerBoard.placeShip(7, 3, 2, 'pentatonic', 'horizontal');
+
+    // make the computer's board responsive
+    DOM.makeGameBoardsAttackable(computerPlayer, humanPlayer);
+
+    // player goes, check if winner, computer goes, check if winner, etc
 
     // gameloop continues as long as either player has not had all of their ships sunken
     while(humanPlayer.playerBoard.checkAllShips() === false && computerPlayer.playerBoard.checkAllShips() === false) {
@@ -267,20 +440,22 @@ const gameLoop = (name) => {
         const humanLost = humanPlayer.playerBoard.checkAllShips();
         const computerLost= computerPlayer.playerBoard.checkAllShips();
         if(humanLost === true) {
-            return 'Computer Wins';
+            document.getElementById('winner').textContent = 'Computer Wins';
+            const coordinateDivsArray = Array.from(document.querySelectorAll('#gameboards div'));
+            coordinateDivsArray.forEach(div => div.classList.add('waitForComputer'));
+            return;
         }
         else if (computerLost === true) {
-            return 'Human Wins';
+            document.getElementById('winner').textContent = `${humanPlayer} wins`;
+            const coordinateDivsArray = Array.from(document.querySelectorAll('#gameboards div'));
+            coordinateDivsArray.forEach(div => div.classList.add('waitForComputer'));
+            return;
         }
         else {
             return 'No Winner Yet';
         }
     };
-    return { determineWinner }
+    return {determineWinner}
 };
 
-
-
-
-
-export { shipFactory, gameboardFactory, player, gameLoop };
+export { shipFactory, gameboardFactory, player, DOM, gameLoop };
