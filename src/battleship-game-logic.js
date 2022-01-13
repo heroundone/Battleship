@@ -22,7 +22,7 @@ const shipFactory = (length, nameOfShip) => {
         const filteredCondition = condition.filter(status => regex.test(status)); 
         // the number of hits(length of the filtered array) should correspond to the length of the ship if it is sunk
         if(filteredCondition.length === condition.length) {
-            return true;
+            return [true, condition];
         } else {
             return false;
         };
@@ -90,7 +90,7 @@ const gameboardFactory = (gridSize) => {
         return [ship, board];
     };
 
-    const receiveAttack = (rowNumber, columnNumber) => {
+    const receiveAttack = (rowNumber, columnNumber, opponent) => {
         // handle an attack that has already been made once
         let regexMiss = /.*miss/;
         let regexHit = /.*hit/;
@@ -116,6 +116,21 @@ const gameboardFactory = (gridSize) => {
            let index = ship.condition.indexOf(`${attackCoordinates}, not damaged`);
            let status = `${attackCoordinates}, hit`
            ship.hit(status, index);
+           let result = ship.isSunk();
+           // result[0] should be true or false
+           if(result[0] === true) {
+               // result[1] should be the ship's condtion array
+               let shipSectionStatus = result[1];
+               // add the sunk class to each coordinate on the gamebaord
+               shipSectionStatus.forEach(section => {
+                   const coordinatesArray = section.split(',');
+                   const coordinates = coordinatesArray[0];
+                   let coordinateQuery = `Coordinate:${coordinates}`
+                   let name = opponent.playerName;
+                   let div = document.querySelector(`div[id='${opponent.playerName}'] div[id='${coordinateQuery}']`)
+                   div.classList.add('sunk');
+               });
+           }
            return 'hit';
        }
            
@@ -159,7 +174,7 @@ const player = (name) => {
                     let newColumnNumber = parseInt(recentAttackArray[1]);
                     
                     // test the strategy of checking left, right, up, and down from the successful attack
-                    const outcome = testStrategy(newRowNumber, newColumnNumber, opponent.playerBoard);
+                    const outcome = testStrategy(newRowNumber, newColumnNumber, opponent);
                     // if the strategy works then we can return, and end the computer's turn
                     if(outcome !== false) {
                         if(outcome.includes('row')) {
@@ -191,7 +206,7 @@ const player = (name) => {
                 result = testAttack(randomRowNumber, randomColumnNumber, opponent.playerBoard);
             };
             // once a valid attack is obtained, make the attack
-            const attackResult = opponent.playerBoard.receiveAttack(randomRowNumber, randomColumnNumber);
+            const attackResult = opponent.playerBoard.receiveAttack(randomRowNumber, randomColumnNumber, opponent);
             attacks.push(`${randomRowNumber}${randomColumnNumber}, ${attackResult}`);
 
             // obtain element from ui gameboard that matches coordinates of randomly generated coordinates
@@ -205,7 +220,7 @@ const player = (name) => {
         }
         // human controlled path
         else {
-            const result = opponent.playerBoard.receiveAttack(rowNumber, columnNumber);
+            const result = opponent.playerBoard.receiveAttack(rowNumber, columnNumber, opponent);
             return result;
         };
     };
@@ -232,37 +247,37 @@ const player = (name) => {
     };
 
     // modify coordinates and check for validity that coordinate has not been previously attacked
-    const testStrategy = (rowNumber, columnNumber, opponentBoard) => {
+    const testStrategy = (rowNumber, columnNumber, opponent) => {
         let result;
         // rowNumber +1 check
         let rowNumberPlus = rowNumber + 1;
-        result = testAttack(rowNumberPlus, columnNumber, opponentBoard);
+        result = testAttack(rowNumberPlus, columnNumber, opponent.playerBoard);
         if(result === true) {
-            const attackResult = opponentBoard.receiveAttack(rowNumberPlus, columnNumber);
+            const attackResult = opponent.playerBoard.receiveAttack(rowNumberPlus, columnNumber, opponent);
             attacks.push(`${rowNumberPlus}${columnNumber}, ${attackResult}`)
             return [attackResult, 'row', rowNumberPlus];
         };
         // rowNumber - 1 check
         let rowNumberMinus = rowNumber - 1;
-        result = testAttack(rowNumberMinus, columnNumber, opponentBoard);
+        result = testAttack(rowNumberMinus, columnNumber, opponent.playerBoard);
         if(result === true) {
-            const attackResult = opponentBoard.receiveAttack(rowNumberMinus, columnNumber);
+            const attackResult = opponent.playerBoard.receiveAttack(rowNumberMinus, columnNumber, opponent);
             attacks.push(`${rowNumberMinus}${columnNumber}, ${attackResult}`)
             return [attackResult, 'row', rowNumberMinus];
         };
         // columnNumber + 1 check
         let columnNumberPlus = columnNumber + 1;
-        result = testAttack(rowNumber, columnNumberPlus, opponentBoard);
+        result = testAttack(rowNumber, columnNumberPlus, opponent.playerBoard);
         if(result === true) {
-            const attackResult = opponentBoard.receiveAttack(rowNumber, columnNumberPlus);
+            const attackResult = opponent.playerBoard.receiveAttack(rowNumber, columnNumberPlus, opponent);
             attacks.push(`${rowNumber}${columnNumberPlus}, ${attackResult}`)
             return [attackResult, 'column', columnNumberPlus];
         }
         // columnNumber - 1 check
         let columnNumberMinus = columnNumber - 1;
-        result = testAttack(rowNumber, columnNumberMinus, opponentBoard);
+        result = testAttack(rowNumber, columnNumberMinus, opponent.playerBoard);
         if(result === true) {
-            const attackResult = opponentBoard.receiveAttack(rowNumber, columnNumberMinus);
+            const attackResult = opponent.playerBoard.receiveAttack(rowNumber, columnNumberMinus, opponent);
             attacks.push(`${rowNumber}${columnNumberMinus}, ${attackResult}`)
             return [attackResult, 'column', columnNumberMinus];
         }

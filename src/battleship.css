@@ -36,6 +36,10 @@
     background-color: blue;
 }
 
+.sunk {
+    background-color: black;
+}
+
 .waitForComputer {
     pointer-events: none;
 }
