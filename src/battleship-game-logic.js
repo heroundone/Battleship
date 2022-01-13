@@ -188,7 +188,7 @@ const player = (name) => {
                 randomRowNumber = getRandomInt(0,9);
                 randomColumnNumber = getRandomInt(0,9);
                 // test whether the random numbers are valid
-                result = testAttack(randomRowNumber, randomColumnNumber);
+                result = testAttack(randomRowNumber, randomColumnNumber, opponent.playerBoard);
             };
             // once a valid attack is obtained, make the attack
             const attackResult = opponent.playerBoard.receiveAttack(randomRowNumber, randomColumnNumber);
@@ -211,12 +211,12 @@ const player = (name) => {
     };
 
     // determine whether the computer is set to make a valid attack
-    const testAttack = (rowNumber, columnNumber) => {
+    const testAttack = (rowNumber, columnNumber, opponentBoard) => {
         // make sure rowNumber and columnNumber do not go beyond the boundaries of the board
         if(rowNumber > 9 || rowNumber < 0 || columnNumber > 9 || columnNumber < 0) {
             return false;
         };
-        const gameBoard = playerBoard.board;
+        const gameBoard = opponentBoard.board;
         const row = gameBoard[rowNumber.toString()];
         const status = row[columnNumber];
         let regexHit = /.*miss/;
@@ -236,7 +236,7 @@ const player = (name) => {
         let result;
         // rowNumber +1 check
         let rowNumberPlus = rowNumber + 1;
-        result = testAttack(rowNumberPlus, columnNumber);
+        result = testAttack(rowNumberPlus, columnNumber, opponentBoard);
         if(result === true) {
             const attackResult = opponentBoard.receiveAttack(rowNumberPlus, columnNumber);
             attacks.push(`${rowNumberPlus}${columnNumber}, ${attackResult}`)
@@ -244,7 +244,7 @@ const player = (name) => {
         };
         // rowNumber - 1 check
         let rowNumberMinus = rowNumber - 1;
-        result = testAttack(rowNumberMinus, columnNumber);
+        result = testAttack(rowNumberMinus, columnNumber, opponentBoard);
         if(result === true) {
             const attackResult = opponentBoard.receiveAttack(rowNumberMinus, columnNumber);
             attacks.push(`${rowNumberMinus}${columnNumber}, ${attackResult}`)
@@ -252,7 +252,7 @@ const player = (name) => {
         };
         // columnNumber + 1 check
         let columnNumberPlus = columnNumber + 1;
-        result = testAttack(rowNumber, columnNumberPlus);
+        result = testAttack(rowNumber, columnNumberPlus, opponentBoard);
         if(result === true) {
             const attackResult = opponentBoard.receiveAttack(rowNumber, columnNumberPlus);
             attacks.push(`${rowNumber}${columnNumberPlus}, ${attackResult}`)
@@ -260,7 +260,7 @@ const player = (name) => {
         }
         // columnNumber - 1 check
         let columnNumberMinus = columnNumber - 1;
-        result = testAttack(rowNumber, columnNumberMinus);
+        result = testAttack(rowNumber, columnNumberMinus, opponentBoard);
         if(result === true) {
             const attackResult = opponentBoard.receiveAttack(rowNumber, columnNumberMinus);
             attacks.push(`${rowNumber}${columnNumberMinus}, ${attackResult}`)
