@@ -11,7 +11,33 @@
 <body>
     <div id="game">
         <div id="gameControl">
-            <button type="button" id="startGame">Start Game</button>
+            <div id="form">
+                <form id='shipPlacementForm'>
+                    <div>
+                        <input type="submit" id="addShip" value="Add Ship"/>
+                    </div>
+                    <div>
+                        <label for="shipName">Ship Name:</label>
+                        <input type="text" id="shipName" placeholder="must start with a letter" pattern="[a-z|A-Z].*" required/>
+                    </div>
+                    <div>
+                        <label for="shipCoordinate">Ship Coordinate Origin:</label>
+                        <input type="text" id="shipCoordinate" placeholder="row,column(eg. 0,5)" 
+                        pattern="\d,\d" required/>
+                    </div>
+                    <div>
+                        <label for="shipLength">Ship Length:</label>
+                        <input type="number" id="shipLength" min="1" max="5" step="1" required/>
+                    </div>
+                    <div>
+                        <span>Select Ship's Orientation:</span>
+                        <input type="radio" id="horizontal" name="orientation" value="horizontal" checked/>
+                        <label for="horizontal">Horizontal</label>
+                        <input type="radio" id="vertical" name="orientation" value="vertical"/>
+                        <label for="vertical">Vertical</label>
+                    </div>
+                </form>
+            </div>
         </div>
         <div id="winnerDisplay">
             <h2 id="winner"></h2>
@@ -19,7 +45,7 @@
         <div id="gameboards">
            
         </div> 
-        <div id="shipCreation">
+        <div id="shipCreationResult">
 
         </div>
     </div>

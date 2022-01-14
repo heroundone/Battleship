@@ -11,6 +11,19 @@
     gap: 50px;
 }
 
+#shipPlacementForm {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 10px;
+}
+
+#form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
 .gameboard {
     display: flex;
     width: 300px;
@@ -41,5 +54,9 @@
 }
 
 .waitForComputer {
+    pointer-events: none;
+}
+
+.stopListening {
     pointer-events: none;
 }

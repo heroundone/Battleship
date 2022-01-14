@@ -1,7 +1,3 @@
-/*hit can take multiple arguments, use rest operator, condition property is array that contains whether
-a section is hit, is sunk looks at condition property and checks if each index contains a hit marker,
-if they do then the ship is sunk */
-
 const shipFactory = (length, nameOfShip) => {
 
     // an array that keeps track of which sections of the ship have been hit
@@ -27,7 +23,6 @@ const shipFactory = (length, nameOfShip) => {
             return false;
         };
     };
-
     return {length, condition, shipName, hit, isSunk};
 };
 
@@ -90,6 +85,80 @@ const gameboardFactory = (gridSize) => {
         return [ship, board];
     };
 
+    const testPlaceShip = (row, column, length, orientation, ships) => {
+        if(ships.length === 0) {
+            return 'successful'
+        };
+        
+        if(orientation === 'horizontal') {
+            for(let i = 0; i < length - 1; i++) {
+                for(let ship in ships) {
+                    const currentShip = ships[ship];
+                    const shipCondition = currentShip.condition;
+                    for(let i = 0; i < shipCondition.length; i++) {
+                        let condition = shipCondition[i];
+                        let status = condition.split(',');
+                        let coordinate = status[0];
+                        let prospectiveShipCoordinate = row.toString() + column.toString();
+                        if(prospectiveShipCoordinate === coordinate) {
+                            return 'unsuccessful'
+                        }
+                    }
+                }
+                column += 1;
+            }
+            return 'successful';
+        }
+        else if(orientation === 'vertical') {
+            for(let i = 0; i< length - 1; i++) {
+                for(let ship in ships) {
+                    const currentShip = ships[ship];
+                    const shipCondition = currentShip.condition;
+                    for(let i = 0; i < shipCondition.length; i++) {
+                        let condition = shipCondition[i];
+                        let status = condition.split(',');
+                        let coordinate = status[0];
+                        let prospectiveShipCoordinate = row.toString() + column.toString();
+                        if(prospectiveShipCoordinate === coordinate) {
+                            return 'unsuccessful'
+                        }
+                    }
+                }
+                row += 1;
+            }
+            return 'successful';
+        }
+    }
+    
+    const placeComputerShip = (length, ships, computerBoard) => {
+        let randomRow;
+        let randomColumn;
+        let orientation;
+        let result = 'unsuccessful';
+        // randomly decide ship's orientation
+        let orientationDecider = DOM.getRandomInt(1, 2);
+        if(orientationDecider === 1) {
+            orientation = 'horizontal';
+        } else {
+            orientation = 'vertical';
+        };
+        // get a valid attack for computer
+        while(result === 'unsuccessful') {
+            randomRow = DOM.getRandomInt(0, 9);
+            randomColumn = DOM.getRandomInt(0, 9);
+            result = testPlaceShip(randomRow, randomColumn, length, orientation, ships);
+        };
+     
+        // compose a random name for the computer's ship
+        let name = '';
+        for(i = 0; i < 15; i++) {
+            let random = DOM.getRandomInt(97, 122);
+            let char = String.fromCharCode(random);
+            name += char;
+        }
+        computerBoard.placeShip(randomRow, randomColumn, length, name, orientation)
+    }
+
     const receiveAttack = (rowNumber, columnNumber, opponent) => {
         // handle an attack that has already been made once
         let regexMiss = /.*miss/;
@@ -151,7 +220,7 @@ const gameboardFactory = (gridSize) => {
         return true;
     };
 
-    return { board, ships, placeShip, receiveAttack, checkAllShips };
+    return { board, ships, placeShip, receiveAttack, checkAllShips, testPlaceShip, placeComputerShip };
 };
 
 const player = (name) => {
@@ -200,8 +269,8 @@ const player = (name) => {
             let randomRowNumber;
             let randomColumnNumber;
             while(result === false) {
-                randomRowNumber = getRandomInt(0,9);
-                randomColumnNumber = getRandomInt(0,9);
+                randomRowNumber = DOM.getRandomInt(0,9);
+                randomColumnNumber = DOM.getRandomInt(0,9);
                 // test whether the random numbers are valid
                 result = testAttack(randomRowNumber, randomColumnNumber, opponent.playerBoard);
             };
@@ -286,11 +355,7 @@ const player = (name) => {
         }
     };
 
-    const getRandomInt = (min, max) => {
-        min = Math.ceil(min);
-        max = Math.floor(max);
-        return Math.floor(Math.random() * (max - min) + min); //The maximum is exclusive and the minimum is inclusive
-      }
+ 
     return {playerName, playerBoard, makeAttack}
 };
 
@@ -303,8 +368,10 @@ const gameLoop = (name) => {
     DOM.createGameboardVisual(humanPlayer);
     DOM.createGameboardVisual(computerPlayer);
 
-    // TODO: manually place ships for now, add way for user to specify later(would need function to check if space is occupied)
-    humanPlayer.playerBoard.placeShip(0, 0, 6, 'chesapeake', 'horizontal');
+    // add event listener to 'add ship button'
+
+    // manually placing ships
+    /*humanPlayer.playerBoard.placeShip(0, 0, 6, 'chesapeake', 'horizontal');
     humanPlayer.playerBoard.placeShip(5, 7, 3, 'altuna', 'horizontal');
     humanPlayer.playerBoard.placeShip(2, 3, 5, 'peep', 'horizontal');
     humanPlayer.playerBoard.placeShip(8, 3, 5, 'fate', 'horizontal');
@@ -312,10 +379,10 @@ const gameLoop = (name) => {
     humanPlayer.playerBoard.placeShip(1, 3, 5, 'feet', 'horizontal');
 
     computerPlayer.playerBoard.placeShip(0, 5, 3, 'york', 'vertical');
-    computerPlayer.playerBoard.placeShip(7, 3, 2, 'pentatonic', 'horizontal');
+    computerPlayer.playerBoard.placeShip(7, 3, 2, 'pentatonic', 'horizontal');*/
 
     // make the computer's board responsive
-    DOM.makeGameBoardsAttackable(computerPlayer, humanPlayer);
+    //DOM.makeGameBoardsAttackable(computerPlayer, humanPlayer);
 
     const determineWinner = () => {
         const humanLost = humanPlayer.playerBoard.checkAllShips();
@@ -336,16 +403,21 @@ const gameLoop = (name) => {
             return 'No Winner Yet';
         }
     };
-    return {determineWinner}
+    return {determineWinner, humanPlayer, computerPlayer}
 };
 
 const DOM = (() => {
     //document.getElementById('startGame').addEventListener('click', gameLoop);
     
 
-    // event listener additions that will be called later as needed(eg. placing ships)
-    /*  function creates the gameboards, each div in the grid will have the respective coordinate data */
+    /* function creates the gameboards, each div in the grid will have the respective coordinate data */
     const createGameboardVisual = (player) => {
+        // element that will display player names above their respective gameboards
+        let displayName = document.createElement('div');
+        let name = document.createElement('h3');
+        name.textContent = player.playerName;
+        displayName.appendChild(name);
+
         // will eventually append each coordinate in grid to gamebaord div
         let gameboard = document.createElement('div');
         gameboard.id = player.playerName;
@@ -371,8 +443,60 @@ const DOM = (() => {
         };
         // append the finished doc fragment to the gameboard div, append gameboard to the gameboards div
         gameboard.appendChild(documentFragment);
+        document.getElementById('gameboards').appendChild(displayName);
         document.getElementById('gameboards').appendChild(gameboard);
     };
+
+    const addShip = () => {
+        let form = document.getElementById("shipPlacementForm");
+        function handleForm(event) { event.preventDefault(); } 
+        form.addEventListener('submit', (e) => {
+            handleForm(e);
+            let shipName = document.querySelector('#shipName').value;
+            let coordinate = document.querySelector('#shipCoordinate').value;
+            let bothCoordinates = coordinate.split(',');
+            let row = parseInt(bothCoordinates[0]);
+            let column = parseInt(bothCoordinates[1]);
+            let length = parseInt(document.querySelector('#shipLength').value);
+            const radios = Array.from(document.querySelectorAll('input[name="orientation"]'));
+            const radio = radios.filter(radio => radio.checked);
+            const orientation = radio[0].value;
+        
+            let humanShips = game.humanPlayer.playerBoard.ships
+            let computerShips = game.computerPlayer.playerBoard.ships
+        
+            let humanBoard = game.humanPlayer.playerBoard;
+            let computerBoard = game.computerPlayer.playerBoard;
+        
+            let result = humanBoard.testPlaceShip(row, column, length, orientation, humanShips)
+            if(result === 'successful') {
+                humanBoard.placeShip(row, column, length, shipName, orientation);
+                computerBoard.placeComputerShip(length, computerShips, computerBoard);
+                document.querySelector('#shipCreationResult').textContent = '';
+                alert('Your Ship Was Successfully Added');
+                // if start game button not appended yet, do so, otherwise return
+                  // add event listener to start game button(will make the boards attackable, respond to clicks)
+                if(!document.querySelector('#startGame')) {
+                    let startGameButton = document.createElement('button');
+                    startGameButton.id = 'startGame';
+                    startGameButton.textContent = 'Start Game';
+                    startGameButton.setAttribute('type', 'button');
+                    startGameButton.addEventListener('click', () => {
+                        // gameboards can now be clicked on
+                        DOM.makeGameBoardsAttackable(game.computerPlayer, game.humanPlayer);
+                        // user can no longer add more ships
+                        document.querySelector('#addShip').classList.add('stopListening');
+                    });
+                    document.querySelector('#gameControl').appendChild(startGameButton);
+                };
+            }
+            else {
+                alert('Your Ship Was NOT Successfully Added')
+                return;
+            }
+        });
+    };
+
 
     // add event listeners to the computer's coordinate divs(each location in the grid)
     const makeGameBoardsAttackable = (computerPlayer, humanPlayer) => {
@@ -425,7 +549,6 @@ const DOM = (() => {
                         coordinateDivsArray.forEach(div => div.classList.toggle('waitForComputer'));
                 }
             };
-            
         }
         else if (result === 'miss') {
             coordinateClicked.textContent = 'O';
@@ -485,11 +608,17 @@ const DOM = (() => {
         return result;
     };
 
+    const getRandomInt = (min, max) => {
+        min = Math.ceil(min);
+        max = Math.floor(max);
+        return Math.floor(Math.random() * (max - min) + min); //The maximum is exclusive and the minimum is inclusive
+    }
 
-    return {createGameboardVisual, makeGameBoardsAttackable}
+    return {createGameboardVisual, makeGameBoardsAttackable, addShip, getRandomInt}
 })();
 
-let game = gameLoop('john');
-
+// set up interactivity upon loading in
+let game = gameLoop('human');
+DOM.addShip();
 
 //export { shipFactory, gameboardFactory, player, DOM, gameLoop };
